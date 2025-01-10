@@ -23,7 +23,7 @@ class Employee(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    datetime = Column(String, nullable=True) #DateTime
+    datetime = Column(DateTime, nullable=True) #DateTime
     department_id = Column(Integer, ForeignKey("departments.id"))
     job_id = Column(Integer, ForeignKey("jobs.id"))
 
