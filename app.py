@@ -6,6 +6,8 @@ import boto3
 from database import SessionLocal, engine
 import models
 from io import StringIO
+import utils
+import numpy as np
 
 app = FastAPI()
 
@@ -38,6 +40,17 @@ def read_employees(db: Session = Depends(get_db)):
     return employees  # Devuelve los resultados
 
 # Endpoint para cargar empleados desde un archivo CSV
+@app.post("/employees/upload/") 
+async def upload_employees(file: UploadFile, db: Session = Depends(get_db)):
+    try:
+        contents = await file.read()
+        result = utils.validate_and_insert_data(contents.decode('utf-8'), db)
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para cargar empleados desde un archivo CSV
 @app.post("/upload/")
 async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
     try:
@@ -57,8 +70,8 @@ async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
         # Asegurarse de que la columna datetime sea tipo string antes de procesar
         df['datetime'] = df['datetime'].astype(str)
 
-        # Reemplazar el "Z" al final de las fechas ISO si existe
-        df['datetime'] = df['datetime'].apply(lambda x: x.replace("Z", "") if isinstance(x, str) else x)
+        # Reemplazar el "Z" y "T" en las fechas ISO
+        df['datetime'] = df['datetime'].apply(lambda x: x.replace("T", " ").replace("Z", "") if isinstance(x, str) else x)
         
         # Verificación antes de la conversión de las fechas
         print("Valores antes de la conversión:")
