@@ -17,3 +17,5 @@ __pycache__/
 
 # Ignorar archivos de datos temporales y de prueba
 files/
+__pycache__/
+*.pyc
