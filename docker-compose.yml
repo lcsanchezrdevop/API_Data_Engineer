@@ -12,6 +12,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/appdb
     volumes:
       - .:/app
+      - "/c/Users/lcsan/OneDrive/Formatos propios/GitHub/API_Data_Engineer/file:/app/files"  # Usa comillas dobles
 
   db:
     image: postgres:13
