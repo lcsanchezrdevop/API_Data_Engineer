@@ -3,10 +3,12 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from .database import get_db
 
+#router = APIRouter()
+
 @app.get("/hires/quarterly/")
 def get_quarterly_hires(db: Session = Depends(get_db)):
     query = text("""
-        SELECT d.name AS department, j.name AS job,
+        SELECT d.name AS department, j.title AS job,
                SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 1 THEN 1 ELSE 0 END) AS Q1,
                SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 2 THEN 1 ELSE 0 END) AS Q2,
                SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 3 THEN 1 ELSE 0 END) AS Q3,
@@ -15,8 +17,8 @@ def get_quarterly_hires(db: Session = Depends(get_db)):
         JOIN departments d ON e.department_id = d.id
         JOIN jobs j ON e.job_id = j.id
         WHERE EXTRACT(YEAR FROM e.datetime) = 2021
-        GROUP BY d.name, j.name
-        ORDER BY d.name, j.name;
+        GROUP BY d.name, j.title
+        ORDER BY d.name, j.title;
     """)
     result = db.execute(query)
     return result.fetchall()

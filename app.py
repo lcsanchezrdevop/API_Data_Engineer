@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import pandas as pd
 from datetime import datetime
 import boto3
@@ -8,8 +9,13 @@ import models
 from io import StringIO
 import utils
 import numpy as np
+#from app.query import router as query_router
+
 
 app = FastAPI()
+
+# Incluir el router de query.py
+#app.include_router(query_router)
 
 # Crea las tablas en la base de datos si no existen
 models.Base.metadata.create_all(bind=engine)
@@ -145,3 +151,47 @@ async def upload_jobs(file: UploadFile, db: Session = Depends(get_db)):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/hires/quarterly/")
+def get_quarterly_hires(db: Session = Depends(get_db)):
+    query = text("""
+        SELECT d.name AS department, j.title AS job,
+               SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 1 THEN 1 ELSE 0 END) AS Q1,
+               SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 2 THEN 1 ELSE 0 END) AS Q2,
+               SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 3 THEN 1 ELSE 0 END) AS Q3,
+               SUM(CASE WHEN EXTRACT(QUARTER FROM e.datetime) = 4 THEN 1 ELSE 0 END) AS Q4
+        FROM employees e
+        JOIN departments d ON e.department_id = d.id
+        JOIN jobs j ON e.job_id = j.id
+        WHERE EXTRACT(YEAR FROM e.datetime) = 2021
+        GROUP BY d.name, j.title
+        ORDER BY d.name, j.title;
+    """)
+    result = db.execute(query).mappings().all()
+
+    return result
+
+@app.get("/hires/above-average/")
+def get_above_average_hires(db: Session = Depends(get_db)):
+    query = text("""
+        WITH average_hires AS (
+            SELECT AVG(hired_count) AS avg_hires
+            FROM (
+                SELECT d.id, COUNT(e.id) AS hired_count
+                FROM employees e
+                JOIN departments d ON e.department_id = d.id
+                WHERE EXTRACT(YEAR FROM e.datetime) = 2021
+                GROUP BY d.id
+            ) hires
+        )
+        SELECT d.id, d.name AS department, COUNT(e.id) AS hired
+        FROM employees e
+        JOIN departments d ON e.department_id = d.id
+        WHERE EXTRACT(YEAR FROM e.datetime) = 2021
+        GROUP BY d.id, d.name
+        HAVING COUNT(e.id) > (SELECT avg_hires FROM average_hires)
+        ORDER BY hired DESC;
+    """)
+    result = db.execute(query).mappings().all()
+
+    return result
