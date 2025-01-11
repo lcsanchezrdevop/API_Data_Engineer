@@ -9,13 +9,8 @@ import models
 from io import StringIO
 import utils
 import numpy as np
-#from app.query import router as query_router
-
 
 app = FastAPI()
-
-# Incluir el router de query.py
-#app.include_router(query_router)
 
 # Crea las tablas en la base de datos si no existen
 models.Base.metadata.create_all(bind=engine)
@@ -53,58 +48,6 @@ async def upload_employees(file: UploadFile, db: Session = Depends(get_db)):
         result = utils.validate_and_insert_data(contents.decode('utf-8'), db)
 
         return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Endpoint para cargar empleados desde un archivo CSV
-@app.post("/upload/")
-async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
-    try:
-        contents = await file.read()
-        
-        # Process and save file to S3 (AWS configuration required)
-        # s3 = boto3.client('s3', aws_access_key_id='your_key', aws_secret_access_key='your_secret')
-        # s3.put_object(Bucket='your_bucket', Key=file.filename, Body=contents)
-        
-        # Carga el archivo CSV sin encabezado (header=None)
-        file_str = contents.decode('utf-8')
-        df = pd.read_csv(StringIO(file_str), header=None)
-
-        # Asignar nombres de columnas manualmente
-        df.columns = ['id', 'name', 'datetime', 'department_id', 'job_id']
-
-        # Asegurarse de que la columna datetime sea tipo string antes de procesar
-        df['datetime'] = df['datetime'].astype(str)
-
-        # Reemplazar el "Z" y "T" en las fechas ISO
-        df['datetime'] = df['datetime'].apply(lambda x: x.replace("T", " ").replace("Z", "") if isinstance(x, str) else x)
-        
-        # Verificación antes de la conversión de las fechas
-        print("Valores antes de la conversión:")
-        print(df['datetime'])
-
-        # Convertir valores válidos en datetime y los valores NaT se dejan como None
-        df['datetime'] = df['datetime'].apply(
-            lambda x: datetime.fromisoformat(x) if x.lower() != 'nan' and x != '' and x != 'NaT' else None
-        )
-
-        # Verificación después de la conversión
-        print("Valores después de la conversión:")
-        print(df['datetime'])
-
-        # Inserta los datos en la base de datos
-        for index, row in df.iterrows():
-            employee = models.Employee(
-                id=row['id'], 
-                name=row['name'], 
-                datetime=row['datetime'] if row['datetime'] is not None else None,  # Se inserta NULL si la fecha es None 
-                department_id=row['department_id'], 
-                job_id=row['job_id']
-            )
-            db.add(employee)
-        db.commit()
-        
-        return {"message": "File uploaded and data inserted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

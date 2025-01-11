@@ -24,7 +24,25 @@ def test_read_employees():
     # Agrega validaciones adicionales según tus necesidades
 
 def test_upload_employees():
+    with open("files/hired_employees.csv", "rb") as file:
+        response = client.post("/employees/upload/", files={"file": file})
+    assert response.status_code == 200
+    assert response.json() == {"message": "File uploaded and data inserted successfully"}
+
+def test_upload_employees_NotExist_Dept_Job():
     with open("files/hired_employees - Does not Exist Department and Job.csv", "rb") as file:
+        response = client.post("/employees/upload/", files={"file": file})
+    assert response.status_code == 200
+    assert response.json() == {"message": "File uploaded and data inserted successfully"}
+
+def test_upload_employees_DateNull():
+    with open("files/hired_employees - Date Null.csv", "rb") as file:
+        response = client.post("/employees/upload/", files={"file": file})
+    assert response.status_code == 200
+    assert response.json() == {"message": "File uploaded and data inserted successfully"}
+
+def test_upload_employees_SomeIssues():
+    with open("files/hired_employees - Carga registros correctos reporta incorrectos.csv", "rb") as file:
         response = client.post("/employees/upload/", files={"file": file})
     assert response.status_code == 200
     assert response.json() == {"message": "File uploaded and data inserted successfully"}
